@@ -18,6 +18,12 @@ press c to clear the canvas and saved lines
 
 the red line is a preview while the mouse is moving
 
+right click to add polygon points
+
+move the mouse to see the red polygon edge preview
+
+press enter to close a polygon with three or more points
+
 ## run
 
 compile the java files in the src folder

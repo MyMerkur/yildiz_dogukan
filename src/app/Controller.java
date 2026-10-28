@@ -2,6 +2,7 @@ package app;
 
 import model.Line;
 import model.Point;
+import model.Polygon;
 import raster.BresenhamLineRasterizer;
 import raster.LineRasterizer;
 import raster.RasterCanvas;
@@ -20,9 +21,12 @@ public class Controller {
     private final RasterCanvas canvas;
     private final LineRasterizer lineRasterizer;
     private final List<Line> lines = new ArrayList<>();
+    private final List<Polygon> polygons = new ArrayList<>();
 
     private Point startPoint;
     private Point currentPoint;
+    private Polygon currentPolygon;
+    private Point polygonPreview;
     private boolean shiftPressed;
 
     public Controller(DrawPanel panel) {
@@ -40,11 +44,12 @@ public class Controller {
         MouseAdapter mouse = new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent event) {
+                panel.requestFocusInWindow();
+
                 if (!SwingUtilities.isLeftMouseButton(event)) {
                     return;
                 }
 
-                panel.requestFocusInWindow();
                 startPoint = pointFromMouse(event);
                 currentPoint = startPoint;
                 redraw();
@@ -72,6 +77,34 @@ public class Controller {
                 currentPoint = null;
                 redraw();
             }
+
+            @Override
+            public void mouseClicked(MouseEvent event) {
+                if (!SwingUtilities.isRightMouseButton(event)) {
+                    return;
+                }
+
+                Point point = pointFromMouse(event);
+
+                if (currentPolygon == null) {
+                    currentPolygon = new Polygon();
+                    polygons.add(currentPolygon);
+                }
+
+                currentPolygon.addPoint(point);
+                polygonPreview = point;
+                redraw();
+            }
+
+            @Override
+            public void mouseMoved(MouseEvent event) {
+                if (currentPolygon == null) {
+                    return;
+                }
+
+                polygonPreview = pointFromMouse(event);
+                redraw();
+            }
         };
 
         panel.addMouseListener(mouse);
@@ -86,9 +119,14 @@ public class Controller {
 
                 if (event.getKeyCode() == KeyEvent.VK_C) {
                     lines.clear();
+                    polygons.clear();
                     startPoint = null;
                     currentPoint = null;
+                    currentPolygon = null;
+                    polygonPreview = null;
                     redraw();
+                } else if (event.getKeyCode() == KeyEvent.VK_ENTER) {
+                    closePolygon();
                 } else if (startPoint != null) {
                     redraw();
                 }
@@ -109,6 +147,14 @@ public class Controller {
         int x = Math.max(0, Math.min(event.getX(), canvas.getWidth() - 1));
         int y = Math.max(0, Math.min(event.getY(), canvas.getHeight() - 1));
         return new Point(x, y);
+    }
+
+    private void closePolygon() {
+        if (currentPolygon != null && currentPolygon.close()) {
+            currentPolygon = null;
+            polygonPreview = null;
+            redraw();
+        }
     }
 
     private Point getEndPoint(Point start, Point mouse) {
@@ -146,11 +192,36 @@ public class Controller {
             lineRasterizer.draw(line);
         }
 
+        for (Polygon polygon : polygons) {
+            drawPolygon(polygon);
+        }
+
         if (startPoint != null && currentPoint != null) {
             lineRasterizer.setColor(0xFF4040);
             lineRasterizer.draw(new Line(startPoint, currentPoint));
         }
 
+        if (currentPolygon != null && polygonPreview != null
+                && !currentPolygon.getPoints().isEmpty()) {
+            List<Point> points = currentPolygon.getPoints();
+            Point lastPoint = points.get(points.size() - 1);
+            lineRasterizer.setColor(0xFF4040);
+            lineRasterizer.draw(new Line(lastPoint, polygonPreview));
+        }
+
         panel.repaint();
+    }
+
+    private void drawPolygon(Polygon polygon) {
+        List<Point> points = polygon.getPoints();
+        lineRasterizer.setColor(0xFFFFFF);
+
+        for (int i = 1; i < points.size(); i++) {
+            lineRasterizer.draw(new Line(points.get(i - 1), points.get(i)));
+        }
+
+        if (polygon.isClosed()) {
+            lineRasterizer.draw(new Line(points.get(points.size() - 1), points.get(0)));
+        }
     }
 }
