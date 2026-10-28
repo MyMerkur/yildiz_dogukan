@@ -32,6 +32,12 @@ press f to fill the last closed polygon with scanline fill
 
 the green scanline fill sorts intersections and redraws the border
 
+make two closed polygons and press k to clip the first one by the last one
+
+the clipping polygon must be convex and its direction is found automatically
+
+the clipping polygon is yellow and the clipped result is cyan
+
 ## run
 
 compile the java files in the src folder

@@ -1,5 +1,6 @@
 package app;
 
+import clipping.SutherlandHodgmanClipper;
 import fill.ScanLineFill;
 import fill.SeedFill;
 import model.Line;
@@ -22,12 +23,15 @@ public class Controller {
     private static final int BORDER_COLOR = 0xFFFFFF;
     private static final int SEED_FILL_COLOR = 0x4080FF;
     private static final int SCAN_FILL_COLOR = 0x40B060;
+    private static final int CLIP_BORDER_COLOR = 0xFFD040;
+    private static final int CLIPPED_COLOR = 0x40FFFF;
 
     private final DrawPanel panel;
     private final RasterCanvas canvas;
     private final LineRasterizer lineRasterizer;
     private final SeedFill seedFill;
     private final ScanLineFill scanLineFill;
+    private final SutherlandHodgmanClipper polygonClipper;
     private final List<Line> lines = new ArrayList<>();
     private final List<Polygon> polygons = new ArrayList<>();
     private final List<Point> fillPoints = new ArrayList<>();
@@ -37,6 +41,8 @@ public class Controller {
     private Point currentPoint;
     private Polygon currentPolygon;
     private Point polygonPreview;
+    private Polygon clippingPolygon;
+    private Polygon clippedPolygon;
     private boolean shiftPressed;
 
     public Controller(DrawPanel panel) {
@@ -45,6 +51,7 @@ public class Controller {
         lineRasterizer = new BresenhamLineRasterizer(canvas);
         seedFill = new SeedFill(canvas);
         scanLineFill = new ScanLineFill(canvas);
+        polygonClipper = new SutherlandHodgmanClipper();
 
         panel.setFocusable(true);
         addMouseInput();
@@ -106,6 +113,8 @@ public class Controller {
                 if (currentPolygon == null) {
                     currentPolygon = new Polygon();
                     polygons.add(currentPolygon);
+                    clippingPolygon = null;
+                    clippedPolygon = null;
                 }
 
                 currentPolygon.addPoint(point);
@@ -143,11 +152,15 @@ public class Controller {
                     currentPoint = null;
                     currentPolygon = null;
                     polygonPreview = null;
+                    clippingPolygon = null;
+                    clippedPolygon = null;
                     redraw();
                 } else if (event.getKeyCode() == KeyEvent.VK_ENTER) {
                     closePolygon();
                 } else if (event.getKeyCode() == KeyEvent.VK_F) {
                     fillLastPolygon();
+                } else if (event.getKeyCode() == KeyEvent.VK_K) {
+                    clipLastPolygons();
                 } else if (startPoint != null) {
                     redraw();
                 }
@@ -197,6 +210,37 @@ public class Controller {
                 return;
             }
         }
+    }
+
+    private void clipLastPolygons() {
+        Polygon subject = null;
+        Polygon clip = null;
+
+        for (int i = polygons.size() - 1; i >= 0; i--) {
+            Polygon polygon = polygons.get(i);
+
+            if (!polygon.isClosed()) {
+                continue;
+            }
+
+            if (clip == null) {
+                clip = polygon;
+            } else {
+                subject = polygon;
+                break;
+            }
+        }
+
+        if (subject == null || !polygonClipper.isConvex(clip)) {
+            clippingPolygon = null;
+            clippedPolygon = null;
+            redraw();
+            return;
+        }
+
+        clippingPolygon = clip;
+        clippedPolygon = polygonClipper.clip(subject, clip);
+        redraw();
     }
 
     private Point getEndPoint(Point start, Point mouse) {
@@ -264,13 +308,18 @@ public class Controller {
         }
 
         for (Polygon polygon : polygons) {
-            drawPolygon(polygon);
+            int color = polygon == clippingPolygon ? CLIP_BORDER_COLOR : BORDER_COLOR;
+            drawPolygon(polygon, color);
+        }
+
+        if (clippedPolygon != null) {
+            drawPolygon(clippedPolygon, CLIPPED_COLOR);
         }
     }
 
-    private void drawPolygon(Polygon polygon) {
+    private void drawPolygon(Polygon polygon, int color) {
         List<Point> points = polygon.getPoints();
-        lineRasterizer.setColor(BORDER_COLOR);
+        lineRasterizer.setColor(color);
 
         for (int i = 1; i < points.size(); i++) {
             lineRasterizer.draw(new Line(points.get(i - 1), points.get(i)));
