@@ -7,8 +7,10 @@ public class AppWindow extends JFrame {
     public AppWindow() {
         setTitle("apgr assignment 01");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        add(new DrawPanel(800, 600));
+        DrawPanel panel = new DrawPanel(800, 600);
+        add(panel);
         pack();
         setLocationRelativeTo(null);
+        new Controller(panel);
     }
 }

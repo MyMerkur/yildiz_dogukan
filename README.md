@@ -8,7 +8,15 @@ the program will draw lines and polygons on a raster canvas
 
 the project has a window and a raster canvas
 
-more assignment parts will be added in small steps
+the program can draw line segments with the mouse
+
+the line uses my bresenham rasterization code
+
+hold shift while dragging for horizontal vertical or diagonal lines
+
+press c to clear the canvas and saved lines
+
+the red line is a preview while the mouse is moving
 
 ## run
 
