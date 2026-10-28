@@ -28,6 +28,10 @@ middle click on the background to use seed fill
 
 the blue fill stops at the white border
 
+press f to fill the last closed polygon with scanline fill
+
+the green scanline fill sorts intersections and redraws the border
+
 ## run
 
 compile the java files in the src folder

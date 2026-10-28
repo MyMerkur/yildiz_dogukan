@@ -1,5 +1,6 @@
 package app;
 
+import fill.ScanLineFill;
 import fill.SeedFill;
 import model.Line;
 import model.Point;
@@ -19,15 +20,18 @@ import java.util.List;
 public class Controller {
 
     private static final int BORDER_COLOR = 0xFFFFFF;
-    private static final int FILL_COLOR = 0x4080FF;
+    private static final int SEED_FILL_COLOR = 0x4080FF;
+    private static final int SCAN_FILL_COLOR = 0x40B060;
 
     private final DrawPanel panel;
     private final RasterCanvas canvas;
     private final LineRasterizer lineRasterizer;
     private final SeedFill seedFill;
+    private final ScanLineFill scanLineFill;
     private final List<Line> lines = new ArrayList<>();
     private final List<Polygon> polygons = new ArrayList<>();
     private final List<Point> fillPoints = new ArrayList<>();
+    private final List<Polygon> scanFilledPolygons = new ArrayList<>();
 
     private Point startPoint;
     private Point currentPoint;
@@ -40,6 +44,7 @@ public class Controller {
         canvas = panel.getCanvas();
         lineRasterizer = new BresenhamLineRasterizer(canvas);
         seedFill = new SeedFill(canvas);
+        scanLineFill = new ScanLineFill(canvas);
 
         panel.setFocusable(true);
         addMouseInput();
@@ -133,6 +138,7 @@ public class Controller {
                     lines.clear();
                     polygons.clear();
                     fillPoints.clear();
+                    scanFilledPolygons.clear();
                     startPoint = null;
                     currentPoint = null;
                     currentPolygon = null;
@@ -140,6 +146,8 @@ public class Controller {
                     redraw();
                 } else if (event.getKeyCode() == KeyEvent.VK_ENTER) {
                     closePolygon();
+                } else if (event.getKeyCode() == KeyEvent.VK_F) {
+                    fillLastPolygon();
                 } else if (startPoint != null) {
                     redraw();
                 }
@@ -171,9 +179,23 @@ public class Controller {
     }
 
     private void fillFromPoint(Point point) {
-        if (seedFill.fill(point.getX(), point.getY(), BORDER_COLOR, FILL_COLOR)) {
+        if (seedFill.fill(point.getX(), point.getY(), BORDER_COLOR, SEED_FILL_COLOR)) {
             fillPoints.add(point);
             panel.repaint();
+        }
+    }
+
+    private void fillLastPolygon() {
+        for (int i = polygons.size() - 1; i >= 0; i--) {
+            Polygon polygon = polygons.get(i);
+
+            if (polygon.isClosed()) {
+                if (!scanFilledPolygons.contains(polygon)) {
+                    scanFilledPolygons.add(polygon);
+                }
+                redraw();
+                return;
+            }
         }
     }
 
@@ -206,19 +228,17 @@ public class Controller {
 
     private void redraw() {
         canvas.clear();
-        lineRasterizer.setColor(BORDER_COLOR);
-
-        for (Line line : lines) {
-            lineRasterizer.draw(line);
-        }
-
-        for (Polygon polygon : polygons) {
-            drawPolygon(polygon);
-        }
+        drawBorders();
 
         for (Point point : fillPoints) {
-            seedFill.fill(point.getX(), point.getY(), BORDER_COLOR, FILL_COLOR);
+            seedFill.fill(point.getX(), point.getY(), BORDER_COLOR, SEED_FILL_COLOR);
         }
+
+        for (Polygon polygon : scanFilledPolygons) {
+            scanLineFill.fill(polygon, SCAN_FILL_COLOR);
+        }
+
+        drawBorders();
 
         if (startPoint != null && currentPoint != null) {
             lineRasterizer.setColor(0xFF4040);
@@ -234,6 +254,18 @@ public class Controller {
         }
 
         panel.repaint();
+    }
+
+    private void drawBorders() {
+        lineRasterizer.setColor(BORDER_COLOR);
+
+        for (Line line : lines) {
+            lineRasterizer.draw(line);
+        }
+
+        for (Polygon polygon : polygons) {
+            drawPolygon(polygon);
+        }
     }
 
     private void drawPolygon(Polygon polygon) {
