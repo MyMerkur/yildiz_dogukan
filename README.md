@@ -24,6 +24,10 @@ move the mouse to see the red polygon edge preview
 
 press enter to close a polygon with three or more points
 
+middle click on the background to use seed fill
+
+the blue fill stops at the white border
+
 ## run
 
 compile the java files in the src folder

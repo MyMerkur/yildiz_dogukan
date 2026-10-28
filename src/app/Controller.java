@@ -1,5 +1,6 @@
 package app;
 
+import fill.SeedFill;
 import model.Line;
 import model.Point;
 import model.Polygon;
@@ -17,11 +18,16 @@ import java.util.List;
 
 public class Controller {
 
+    private static final int BORDER_COLOR = 0xFFFFFF;
+    private static final int FILL_COLOR = 0x4080FF;
+
     private final DrawPanel panel;
     private final RasterCanvas canvas;
     private final LineRasterizer lineRasterizer;
+    private final SeedFill seedFill;
     private final List<Line> lines = new ArrayList<>();
     private final List<Polygon> polygons = new ArrayList<>();
+    private final List<Point> fillPoints = new ArrayList<>();
 
     private Point startPoint;
     private Point currentPoint;
@@ -33,6 +39,7 @@ public class Controller {
         this.panel = panel;
         canvas = panel.getCanvas();
         lineRasterizer = new BresenhamLineRasterizer(canvas);
+        seedFill = new SeedFill(canvas);
 
         panel.setFocusable(true);
         addMouseInput();
@@ -80,6 +87,11 @@ public class Controller {
 
             @Override
             public void mouseClicked(MouseEvent event) {
+                if (SwingUtilities.isMiddleMouseButton(event)) {
+                    fillFromPoint(pointFromMouse(event));
+                    return;
+                }
+
                 if (!SwingUtilities.isRightMouseButton(event)) {
                     return;
                 }
@@ -120,6 +132,7 @@ public class Controller {
                 if (event.getKeyCode() == KeyEvent.VK_C) {
                     lines.clear();
                     polygons.clear();
+                    fillPoints.clear();
                     startPoint = null;
                     currentPoint = null;
                     currentPolygon = null;
@@ -157,6 +170,13 @@ public class Controller {
         }
     }
 
+    private void fillFromPoint(Point point) {
+        if (seedFill.fill(point.getX(), point.getY(), BORDER_COLOR, FILL_COLOR)) {
+            fillPoints.add(point);
+            panel.repaint();
+        }
+    }
+
     private Point getEndPoint(Point start, Point mouse) {
         if (!shiftPressed) {
             return mouse;
@@ -186,7 +206,7 @@ public class Controller {
 
     private void redraw() {
         canvas.clear();
-        lineRasterizer.setColor(0xFFFFFF);
+        lineRasterizer.setColor(BORDER_COLOR);
 
         for (Line line : lines) {
             lineRasterizer.draw(line);
@@ -194,6 +214,10 @@ public class Controller {
 
         for (Polygon polygon : polygons) {
             drawPolygon(polygon);
+        }
+
+        for (Point point : fillPoints) {
+            seedFill.fill(point.getX(), point.getY(), BORDER_COLOR, FILL_COLOR);
         }
 
         if (startPoint != null && currentPoint != null) {
@@ -214,7 +238,7 @@ public class Controller {
 
     private void drawPolygon(Polygon polygon) {
         List<Point> points = polygon.getPoints();
-        lineRasterizer.setColor(0xFFFFFF);
+        lineRasterizer.setColor(BORDER_COLOR);
 
         for (int i = 1; i < points.size(); i++) {
             lineRasterizer.draw(new Line(points.get(i - 1), points.get(i)));
