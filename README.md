@@ -4,45 +4,47 @@ this project is for the first apgr assignment
 
 the program will draw lines and polygons on a raster canvas
 
-## current state
+## features
 
-the project has a window and a raster canvas
+the program draws line segments with my bresenham rasterization code
 
-the program can draw line segments with the mouse
+it creates closed polygons from mouse points
 
-the line uses my bresenham rasterization code
+it has seed fill with background and border color checks
+
+it has scanline polygon fill with sorted intersections
+
+it uses sutherland hodgman clipping with a convex clipping polygon
+
+## controls
+
+drag with the left mouse button to draw a line
 
 hold shift while dragging for horizontal vertical or diagonal lines
 
-press c to clear the canvas and saved lines
-
-the red line is a preview while the mouse is moving
-
 right click to add polygon points
-
-move the mouse to see the red polygon edge preview
 
 press enter to close a polygon with three or more points
 
-middle click on the background to use seed fill
+middle click on the background to use blue seed fill
 
-the blue fill stops at the white border
-
-press f to fill the last closed polygon with scanline fill
-
-the green scanline fill sorts intersections and redraws the border
+press f to fill the last closed polygon with green scanline fill
 
 make two closed polygons and press k to clip the first one by the last one
 
-the clipping polygon must be convex and its direction is found automatically
-
 the clipping polygon is yellow and the clipped result is cyan
+
+press c to clear the canvas and all saved drawing data
+
+red lines show the current mouse preview
 
 ## run
 
 compile the java files in the src folder
 
 run the Main class
+
+the project only needs a java development kit
 
 ## ai use
 
