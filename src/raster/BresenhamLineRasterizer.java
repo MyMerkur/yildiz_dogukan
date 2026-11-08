@@ -1,5 +1,6 @@
 package raster;
 
+// draws line pixels using only integer math, works for every slope
 public class BresenhamLineRasterizer extends LineRasterizer {
 
     public BresenhamLineRasterizer(RasterCanvas canvas) {
@@ -22,6 +23,7 @@ public class BresenhamLineRasterizer extends LineRasterizer {
                 break;
             }
 
+            // pick the next pixel from the accumulated error on x and y
             int error2 = error * 2;
 
             if (error2 > -dy) {
