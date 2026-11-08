@@ -30,11 +30,12 @@ public class Controller {
     private final RasterCanvas canvas;
     private final LineRasterizer lineRasterizer;
     private final SeedFill seedFill;
+    private SeedFill.Mode seedFillMode = SeedFill.Mode.BACKGROUND_COLOR;
     private final ScanLineFill scanLineFill;
     private final SutherlandHodgmanClipper polygonClipper;
     private final List<Line> lines = new ArrayList<>();
     private final List<Polygon> polygons = new ArrayList<>();
-    private final List<Point> fillPoints = new ArrayList<>();
+    private final List<FillRequest> fillRequests = new ArrayList<>();
     private final List<Polygon> scanFilledPolygons = new ArrayList<>();
 
     private Point startPoint;
@@ -44,6 +45,7 @@ public class Controller {
     private Polygon clippingPolygon;
     private Polygon clippedPolygon;
     private boolean shiftPressed;
+    private boolean polygonMode;
 
     public Controller(DrawPanel panel) {
         this.panel = panel;
@@ -61,11 +63,24 @@ public class Controller {
 
     private void addMouseInput() {
         MouseAdapter mouse = new MouseAdapter() {
-            @Override
+           @Override
             public void mousePressed(MouseEvent event) {
                 panel.requestFocusInWindow();
 
                 if (!SwingUtilities.isLeftMouseButton(event)) {
+                    return;
+                }
+
+                if (polygonMode) {
+                    if (currentPolygon == null) {
+                        currentPolygon = new Polygon();
+                        polygons.add(currentPolygon);
+                        clippingPolygon = null;
+                        clippedPolygon = null;
+                    }
+
+                    polygonPreview = pointFromMouse(event);
+                    redraw();
                     return;
                 }
 
@@ -76,6 +91,16 @@ public class Controller {
 
             @Override
             public void mouseDragged(MouseEvent event) {
+                if (polygonMode) {
+                    if (currentPolygon == null || polygonPreview == null) {
+                        return;
+                    }
+
+                    polygonPreview = pointFromMouse(event);
+                    redraw();
+                    return;
+                }
+
                 if (startPoint == null) {
                     return;
                 }
@@ -86,7 +111,23 @@ public class Controller {
 
             @Override
             public void mouseReleased(MouseEvent event) {
-                if (startPoint == null || !SwingUtilities.isLeftMouseButton(event)) {
+                if (!SwingUtilities.isLeftMouseButton(event)) {
+                    return;
+                }
+
+                if (polygonMode) {
+                    if (currentPolygon == null) {
+                        return;
+                    }
+
+                    polygonPreview = pointFromMouse(event);
+                    currentPolygon.addPoint(polygonPreview);
+                    polygonPreview = null;
+                    redraw();
+                    return;
+                }
+
+                if (startPoint == null) {
                     return;
                 }
 
@@ -101,36 +142,10 @@ public class Controller {
             public void mouseClicked(MouseEvent event) {
                 if (SwingUtilities.isMiddleMouseButton(event)) {
                     fillFromPoint(pointFromMouse(event));
-                    return;
                 }
-
-                if (!SwingUtilities.isRightMouseButton(event)) {
-                    return;
-                }
-
-                Point point = pointFromMouse(event);
-
-                if (currentPolygon == null) {
-                    currentPolygon = new Polygon();
-                    polygons.add(currentPolygon);
-                    clippingPolygon = null;
-                    clippedPolygon = null;
-                }
-
-                currentPolygon.addPoint(point);
-                polygonPreview = point;
-                redraw();
             }
 
-            @Override
-            public void mouseMoved(MouseEvent event) {
-                if (currentPolygon == null) {
-                    return;
-                }
-
-                polygonPreview = pointFromMouse(event);
-                redraw();
-            }
+           
         };
 
         panel.addMouseListener(mouse);
@@ -139,14 +154,31 @@ public class Controller {
 
     private void addKeyboardInput() {
         panel.addKeyListener(new KeyAdapter() {
+
             @Override
             public void keyPressed(KeyEvent event) {
                 shiftPressed = event.isShiftDown();
 
-                if (event.getKeyCode() == KeyEvent.VK_C) {
+                if (event.getKeyCode() == KeyEvent.VK_P) {
+                    polygonMode = true;
+                    startPoint = null;
+                    currentPoint = null;
+
+                } else if (event.getKeyCode() == KeyEvent.VK_L) {
+                    polygonMode = false;
+                    polygonPreview = null;
+
+                } else if (event.getKeyCode() == KeyEvent.VK_B) {
+                    if (seedFillMode == SeedFill.Mode.BACKGROUND_COLOR) {
+                        seedFillMode = SeedFill.Mode.BORDER_COLOR;
+                    } else {
+                        seedFillMode = SeedFill.Mode.BACKGROUND_COLOR;
+                    }
+
+                } else if (event.getKeyCode() == KeyEvent.VK_C) {
                     lines.clear();
                     polygons.clear();
-                    fillPoints.clear();
+                    fillRequests.clear();
                     scanFilledPolygons.clear();
                     startPoint = null;
                     currentPoint = null;
@@ -155,12 +187,16 @@ public class Controller {
                     clippingPolygon = null;
                     clippedPolygon = null;
                     redraw();
+
                 } else if (event.getKeyCode() == KeyEvent.VK_ENTER) {
                     closePolygon();
+
                 } else if (event.getKeyCode() == KeyEvent.VK_F) {
                     fillLastPolygon();
+
                 } else if (event.getKeyCode() == KeyEvent.VK_K) {
                     clipLastPolygons();
+
                 } else if (startPoint != null) {
                     redraw();
                 }
@@ -192,8 +228,8 @@ public class Controller {
     }
 
     private void fillFromPoint(Point point) {
-        if (seedFill.fill(point.getX(), point.getY(), BORDER_COLOR, SEED_FILL_COLOR)) {
-            fillPoints.add(point);
+        if (seedFill.fill(point.getX(), point.getY(), BORDER_COLOR, SEED_FILL_COLOR, seedFillMode)) {
+            fillRequests.add(new FillRequest(point, seedFillMode));
             panel.repaint();
         }
     }
@@ -274,8 +310,13 @@ public class Controller {
         canvas.clear();
         drawBorders();
 
-        for (Point point : fillPoints) {
-            seedFill.fill(point.getX(), point.getY(), BORDER_COLOR, SEED_FILL_COLOR);
+        for (FillRequest request : fillRequests) {
+            seedFill.fill(
+                    request.point.getX(),
+                    request.point.getY(),
+                    BORDER_COLOR,
+                    SEED_FILL_COLOR,
+                    request.mode);
         }
 
         for (Polygon polygon : scanFilledPolygons) {
@@ -290,12 +331,19 @@ public class Controller {
         }
 
         if (currentPolygon != null && polygonPreview != null
-                && !currentPolygon.getPoints().isEmpty()) {
-            List<Point> points = currentPolygon.getPoints();
-            Point lastPoint = points.get(points.size() - 1);
-            lineRasterizer.setColor(0xFF4040);
-            lineRasterizer.draw(new Line(lastPoint, polygonPreview));
+        && !currentPolygon.getPoints().isEmpty()) {
+
+        List<Point> points = currentPolygon.getPoints();
+        Point lastPoint = points.get(points.size() - 1);
+
+        lineRasterizer.setColor(0xFF4040);
+        lineRasterizer.draw(new Line(lastPoint, polygonPreview));
+
+        if (points.size() >= 2) {
+            Point firstPoint = points.get(0);
+            lineRasterizer.draw(new Line(firstPoint, polygonPreview));
         }
+    }
 
         panel.repaint();
     }
@@ -327,6 +375,17 @@ public class Controller {
 
         if (polygon.isClosed()) {
             lineRasterizer.draw(new Line(points.get(points.size() - 1), points.get(0)));
+        }
+    }
+
+    private static class FillRequest {
+
+        private final Point point;
+        private final SeedFill.Mode mode;
+
+        private FillRequest(Point point, SeedFill.Mode mode) {
+            this.point = point;
+            this.mode = mode;
         }
     }
 }

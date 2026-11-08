@@ -10,32 +10,44 @@ public class SeedFill {
         this.canvas = canvas;
     }
 
-    public boolean fill(int x, int y, int borderColor, int fillColor) {
-        int backgroundColor = canvas.getClearColor();
+    public enum Mode {
+        BACKGROUND_COLOR,
+        BORDER_COLOR
+    }
 
-        if (fillColor == backgroundColor
-                || !canFill(x, y, backgroundColor, borderColor, fillColor)) {
+    public boolean fill(int x,int y,int borderColor,int fillColor,Mode mode) {
+        //int backgroundColor = canvas.getClearColor();
+        int targetColor = canvas.getPixel(x, y);
+        
+        if(targetColor == fillColor || targetColor == borderColor){
+            return false;
+        }
+        if(!canFill(x,y,targetColor,borderColor,fillColor,mode)){
             return false;
         }
 
-        fillSpan(x, y, backgroundColor, borderColor, fillColor);
+        //??????
+        fillSpan(x,y,targetColor,borderColor,fillColor,mode);
         return true;
     }
 
-    private void fillSpan(int x, int y, int backgroundColor,
-                          int borderColor, int fillColor) {
-        if (!canFill(x, y, backgroundColor, borderColor, fillColor)) {
+    
+
+    
+
+    private void fillSpan(int x,int y,int targetColor,int borderColor,int fillColor,Mode mode) {
+        if (!canFill(x,y,targetColor,borderColor,fillColor,mode)) {
             return;
         }
 
         int left = x;
         int right = x;
 
-        while (canFill(left - 1, y, backgroundColor, borderColor, fillColor)) {
+        while (canFill(left - 1,y,targetColor,borderColor,fillColor,mode)) {
             left--;
         }
 
-        while (canFill(right + 1, y, backgroundColor, borderColor, fillColor)) {
+        while (canFill(right + 1, y,targetColor,borderColor,fillColor,mode)) {
             right++;
         }
 
@@ -43,38 +55,44 @@ public class SeedFill {
             canvas.setPixel(currentX, y, fillColor);
         }
 
-        fillNextRow(left, right, y - 1, backgroundColor, borderColor, fillColor);
-        fillNextRow(left, right, y + 1, backgroundColor, borderColor, fillColor);
+        fillNextRow(left,right, y - 1,targetColor,borderColor,fillColor,mode);
+        fillNextRow(left,right, y + 1,targetColor,borderColor,fillColor,mode);
     }
 
-    private void fillNextRow(int left, int right, int y, int backgroundColor,
-                             int borderColor, int fillColor) {
+    private void fillNextRow(int left, int right, int y,int targetColor,int borderColor, int fillColor,Mode mode) {
         int x = left;
 
         while (x <= right) {
             while (x <= right
-                    && !canFill(x, y, backgroundColor, borderColor, fillColor)) {
+                    && !canFill(x,y,targetColor,borderColor,fillColor,mode)) {
                 x++;
             }
 
             if (x <= right) {
-                fillSpan(x, y, backgroundColor, borderColor, fillColor);
+                fillSpan(x,y,targetColor,borderColor,fillColor,mode);
             }
 
             while (x <= right
-                    && !canFill(x, y, backgroundColor, borderColor, fillColor)) {
+                    && !canFill(x,y,targetColor,borderColor,fillColor,mode)) {
                 x++;
             }
         }
     }
 
-    private boolean canFill(int x, int y, int backgroundColor,
-                            int borderColor, int fillColor) {
+    private boolean canFill(int x,int y,int targetColor,int borderColor,int fillColor,Mode mode) {
         if (!canvas.isInside(x, y)) {
             return false;
         }
 
         int color = canvas.getPixel(x, y);
-        return color == backgroundColor && color != borderColor && color != fillColor;
+        //return color == backgroundColor && color != borderColor && color != fillColor;
+
+        if (color == fillColor){
+            return false;
+        }
+        if (mode == Mode.BACKGROUND_COLOR){
+            return color == targetColor;
+        }
+        return color != borderColor;
     }
 }
