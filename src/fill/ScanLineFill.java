@@ -15,6 +15,7 @@ public class ScanLineFill {
         this.canvas = canvas;
     }
 
+    // scanline fill for a closed polygon between its min and max y
     public boolean fill(Polygon polygon, int color) {
         List<Point> points = polygon.getPoints();
 
@@ -40,6 +41,7 @@ public class ScanLineFill {
         return true;
     }
 
+    // find edge crossings on this row and fill pixels between the sorted pairs
     private void fillRow(List<Point> points, int y, int color) {
         List<Double> intersections = new ArrayList<>();
         double scanY = y + 0.5;
