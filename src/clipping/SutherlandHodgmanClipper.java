@@ -10,6 +10,7 @@ public class SutherlandHodgmanClipper {
 
     private static final double EPSILON = 0.000001;
 
+    // clip the subject polygon against every edge of the convex clipper
     public Polygon clip(Polygon subject, Polygon clipPolygon) {
         if (!isValid(subject) || !isConvex(clipPolygon)) {
             return null;
@@ -61,6 +62,7 @@ public class SutherlandHodgmanClipper {
         return result;
     }
 
+    // convex check by keeping a single sign for the cross product of every corner
     public boolean isConvex(Polygon polygon) {
         if (!isValid(polygon)) {
             return false;
