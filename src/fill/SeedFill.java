@@ -15,6 +15,7 @@ public class SeedFill {
         BORDER_COLOR
     }
 
+    // flood fill from a seed pixel, supports background and border modes
     public boolean fill(int x,int y,int borderColor,int fillColor,Mode mode) {
         //int backgroundColor = canvas.getClearColor();
         int targetColor = canvas.getPixel(x, y);
@@ -79,6 +80,7 @@ public class SeedFill {
         }
     }
 
+    // tells if a pixel is still fillable under the current mode
     private boolean canFill(int x,int y,int targetColor,int borderColor,int fillColor,Mode mode) {
         if (!canvas.isInside(x, y)) {
             return false;
